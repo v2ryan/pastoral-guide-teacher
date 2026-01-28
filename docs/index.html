@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>跨世代牧養指南（導師版）</title>
+  <style>
+    :root{ --bg:#0b1220; --panel:#0f1830; --card:#111b33; --text:#eaf0ff; --muted:#aab6d6; --border: rgba(255,255,255,.12); --link:#8fb1ff; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background: radial-gradient(1200px 800px at 20% 10%, #16224a, var(--bg)); color:var(--text); }
+    header{ position:sticky; top:0; z-index:5; backdrop-filter: blur(10px); background: rgba(11,18,32,.75); border-bottom:1px solid var(--border); }
+    .wrap{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; }
+    .title{ font-weight:800; letter-spacing:.2px; }
+    .sub{ color:var(--muted); font-size:12px; }
+
+    .layout{ display:grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 54px); }
+    @media (max-width: 900px){ .layout{ grid-template-columns: 1fr; } .sidebar{ position:sticky; top:54px; } }
+
+    .sidebar{ border-right:1px solid var(--border); background: rgba(15,24,48,.65); }
+    .side-inner{ padding: 12px; }
+    .search{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background: rgba(255,255,255,.06); color:var(--text); outline:none; }
+    .list{ margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+    .item{ display:flex; gap:10px; align-items:flex-start; padding:10px 10px; border-radius:12px; border:1px solid var(--border); background: rgba(17,27,51,.55); cursor:pointer; text-decoration:none; color:var(--text); }
+    .item:hover{ background: rgba(17,27,51,.8); }
+    .item.active{ outline: 2px solid rgba(143,177,255,.5); }
+    .badge{ font-size:11px; color:var(--muted); border:1px solid var(--border); padding:2px 8px; border-radius:999px; }
+    .it-title{ font-weight:750; }
+    .it-desc{ color:var(--muted); font-size:12px; margin-top:2px; }
+
+    .content{ padding: 18px 18px 60px; }
+    .card{ background: rgba(17,27,51,.70); border:1px solid var(--border); border-radius: 16px; padding: 16px 16px; box-shadow: 0 10px 35px rgba(0,0,0,.35); }
+
+    .md{ line-height:1.7; }
+    .md h1,.md h2,.md h3{ line-height:1.25; }
+    .md a{ color: var(--link); }
+    .md code{ background: rgba(0,0,0,.25); padding: 2px 6px; border-radius: 8px; }
+    .md pre{ background: rgba(0,0,0,.30); padding: 12px; border-radius: 12px; overflow:auto; }
+
+    .topnote{ margin: 0 0 10px 0; color:var(--muted); font-size: 12px; }
+    .error{ color:#ffb4b4; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div>
+        <div class="title">跨世代牧養指南｜導師版</div>
+        <div class="sub">左邊選擇內容，右邊閱讀。</div>
+      </div>
+      <div class="sub">左邊選擇｜右邊閱讀</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-inner">
+        <input id="q" class="search" placeholder="搜尋… (標題)" />
+        <div id="list" class="list"></div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <p class="topnote">提示：內容較長時可用瀏覽器搜尋（Ctrl/⌘ + F）。</p>
+      <div class="card">
+        <div id="view" class="md">Loading…</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Configure marked
+    marked.setOptions({ breaks: true });
+
+    const DOCS = [{"id": "teacher-manual", "title": "使用手冊（導師版）", "kind": "md", "path": "./使用手冊_導師版.md", "desc": "教學流程、策略、FAQ"}, {"id": "teacher-guide", "title": "牧養指南（導師版）", "kind": "md", "path": "./pastoral_guide_teacher.md", "desc": "導師版重點內容"}, {"id": "teacher-detail", "title": "導師指南（詳細）", "kind": "md", "path": "./detailed_teacher_guide_book.md", "desc": "更完整的導師書"}, {"id": "site-home", "title": "原網站：首頁（HTML）", "kind": "html", "path": "./site-home.html", "desc": "原本 index.html 內容"}, {"id": "profiles", "title": "原網站：受眾畫像（HTML）", "kind": "html", "path": "./profiles.html", "desc": "三代信徒畫像與策略"}, {"id": "lessons", "title": "原網站：教案設計（HTML）", "kind": "html", "path": "./lessons.html", "desc": "教案頁"}];
+
+    const listEl = document.getElementById('list');
+    const viewEl = document.getElementById('view');
+    const qEl = document.getElementById('q');
+
+    function currentId(){
+      const h = (location.hash || '').replace(/^#/, '');
+      return h || (DOCS[0]?.id ?? '');
+    }
+
+    function renderList(){
+      const q = (qEl.value || '').toLowerCase().trim();
+      const id = currentId();
+      listEl.innerHTML = '';
+
+      for (const d of DOCS){
+        if (q && !d.title.toLowerCase().includes(q)) continue;
+        const a = document.createElement('a');
+        a.className = 'item' + (d.id === id ? ' active' : '');
+        a.href = `#${d.id}`;
+        a.innerHTML = `
+          <div style="flex:1">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <div class="it-title">${d.title}</div>
+              <div class="badge">${d.kind}</div>
+            </div>
+            <div class="it-desc">${d.desc || ''}</div>
+          </div>
+        `;
+        listEl.appendChild(a);
+      }
+    }
+
+    async function loadDoc(id){
+      const d = DOCS.find(x => x.id === id) || DOCS[0];
+      if (!d){ viewEl.innerHTML = '<div class="error">No documents configured.</div>'; return; }
+
+      renderList();
+
+      if (d.kind === 'html'){
+        // Navigate to html page
+        location.href = d.path;
+        return;
+      }
+
+      try {
+        const res = await fetch(d.path, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const md = await res.text();
+        viewEl.innerHTML = marked.parse(md);
+      } catch (e){
+        viewEl.innerHTML = `<div class="error">Failed to load: ${d.path}<br/>${String(e)}</div>`;
+      }
+    }
+
+    window.addEventListener('hashchange', () => loadDoc(currentId()));
+    qEl.addEventListener('input', renderList);
+
+    renderList();
+    loadDoc(currentId());
+  </script>
+</body>
+</html>
