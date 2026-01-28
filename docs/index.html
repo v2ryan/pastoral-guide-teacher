@@ -111,10 +111,9 @@
       if (!d){ viewEl.innerHTML = '<div class="error">No documents configured.</div>'; return; }
 
       renderList();
-
-      if (d.kind === 'html'){
-        // Navigate to html page
-        location.href = d.path;
+      if (d.kind === 'html') {
+        // Render HTML in-place
+        viewEl.innerHTML = `<iframe src="${d.path}" style="width:100%;height:75vh;border:0;border-radius:12px;background:rgba(0,0,0,.15)"></iframe>`;
         return;
       }
 
